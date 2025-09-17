@@ -1,0 +1,127 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    // Helpers
+    function authed() {
+      return request.auth != null;
+    }
+    function isOwner(uid) {
+      return authed() && request.auth.uid == uid;
+    }
+
+    // USERS: private profile + journeys (limit chosen to <= 2)
+    match /users/{uid} {
+      allow read:   if isOwner(uid);
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid) && journeysOk();
+      allow delete: if false;
+
+      function journeysOk() {
+        return
+          !('journeys' in request.resource.data)
+          || !('chosen' in request.resource.data.journeys)
+          || (
+            request.resource.data.journeys.chosen is list
+            && request.resource.data.journeys.chosen.size() <= 2
+          );
+      }
+    }
+
+    // PROFILES (optional): owner-only
+    match /profiles/{uid} {
+      allow read, write: if isOwner(uid);
+    }
+
+    // GOALS: admin provides; read-only to clients
+    match /goals/{goalId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // SHARES: community posts
+    match /shares/{shareId} {
+      // public reads
+      allow read: if true;
+
+      // Owner can create/update their own post
+      allow create: if authed()
+                    && request.resource.data.uid == request.auth.uid
+                    && validShareCreate();
+      allow update: if authed()
+                    && resource.data.uid == request.auth.uid
+                    && validShareUpdate();
+      allow delete: if false;
+
+      function validShareCreate() {
+        return ('uid' in request.resource.data)
+          && ('type' in request.resource.data)       // "achieved" / "live"
+          && ('public' in request.resource.data)     // boolean
+          && ('status' in request.resource.data)     // e.g. "completed"
+          && ('createdAt' in request.resource.data); // serverTimestamp()
+      }
+      function validShareUpdate() {
+        return request.resource.data.uid == resource.data.uid;
+      }
+
+      // Per-user reactions (like/heart) UNDER a share
+      match /reactions/{uid} {
+        allow read: if true;
+        allow create, update, delete: if isOwner(uid);
+      }
+
+      // Reflections: public or owner-viewable UNDER a share
+      match /reflections/{docId} {
+        allow read: if resource.data.public == true
+                    || (authed() && resource.data.owner == request.auth.uid);
+        allow create, update: if authed()
+                              && request.resource.data.owner == request.auth.uid;
+        allow delete: if false;
+      }
+    }
+
+
+    // Q&A messages at TOP LEVEL (what your app writes to)
+    match /qaMessages/{msgId} {
+      allow read: if true;
+
+      // Only signed-in users can post, and only as themselves.
+      allow create: if authed()
+                    && request.resource.data.uid == request.auth.uid
+                    && validMessage();
+
+      // Keep messages immutable; allow author to delete their own.
+      allow update: if false;
+      allow delete: if isOwner(resource.data.uid);
+
+      // Accept serverTimestamp() for createdAt
+      function validMessage() {
+        return request.resource.data.text is string
+               && request.resource.data.text.size() > 0
+               && request.resource.data.questionId is string
+               && request.resource.data.authorName is string
+               && ('createdAt' in request.resource.data)
+               && (
+                    request.resource.data.createdAt is timestamp
+                    || request.resource.data.createdAt == request.time
+                    || request.resource.data.createdAt == null
+                  )
+               && (
+                    !('authorPhotoURL' in request.resource.data)
+                    || request.resource.data.authorPhotoURL is string
+                    || request.resource.data.authorPhotoURL == null
+                  );
+      }
+
+      // Reactions subcollection UNDER a qaMessage
+      match /reactions/{reactionUid} {
+        allow read: if true;
+        allow create, delete: if isOwner(reactionUid);
+        allow update: if false;
+      }
+    }
+  }
+}
+}
