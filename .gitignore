@@ -69,3 +69,7 @@ node_modules/
 .dataconnect
 
 backend/serviceAccountKey.json
+
+# macOS system files
+.DS_Store
+backend/.DS_Store
