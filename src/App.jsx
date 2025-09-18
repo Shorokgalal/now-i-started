@@ -1,3 +1,4 @@
+// src/App.jsx
 import React, { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./state/auth.jsx";
@@ -17,18 +18,22 @@ import AuthPage from "./pages/AuthPage.jsx";
 
 function RequireAuth({ children }) {
   const { user, initializing } = useAuth();
-  if (initializing) return <div className="min-h-screen grid place-items-center">Loading…</div>;
+  if (initializing) {
+    return <div className="min-h-screen grid place-items-center">Loading…</div>;
+  }
   return user ? children : <Navigate to="/auth" replace />;
 }
 
 function AuthOnly({ children }) {
   const { user, initializing } = useAuth();
-  if (initializing) return <div className="min-h-screen grid place-items-center">Loading…</div>;
+  if (initializing) {
+    return <div className="min-h-screen grid place-items-center">Loading…</div>;
+  }
   return user ? <Navigate to="/vote" replace /> : children;
 }
 
 export default function App() {
-  const { user } = useAuth(); // get logged-in user
+  const { user } = useAuth(); // ✅ current logged-in user
 
   // 🔔 Push notifications init
   useEffect(() => {
@@ -37,7 +42,7 @@ export default function App() {
 
       if (token && user) {
         try {
-          // send token + uid to backend
+          // 1️⃣ Save token with user UID
           await fetch("http://localhost:3001/api/save-fcm-token", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -46,15 +51,27 @@ export default function App() {
               token,
             }),
           });
-          console.log("FCM token saved for user:", user.uid);
+          console.log("✅ FCM token saved for user:", user.uid);
+
+          // 2️⃣ Subscribe token to topics
+          await fetch("http://localhost:3001/api/subscribe-all", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token }),
+          });
+          console.log("✅ FCM token subscribed to topics");
         } catch (err) {
-          console.error("Failed to save FCM token:", err);
+          console.error("❌ Failed to save/subscribe FCM token:", err);
         }
       }
 
       // Listen for foreground notifications
       onForegroundMessage((payload) => {
-        alert(`📩 ${payload.notification.title}: ${payload.notification.body}`);
+        if (payload?.notification) {
+          alert(`📩 ${payload.notification.title}: ${payload.notification.body}`);
+        } else {
+          console.log("📩 Received foreground message:", payload);
+        }
       });
     }
 

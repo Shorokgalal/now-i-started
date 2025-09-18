@@ -51,6 +51,9 @@
   "firebase-admin": "^13.5.0",
   
     
+  "node-cron": "^4.2.1",
+  
+    
   "react": "^19.1.1",
   
     

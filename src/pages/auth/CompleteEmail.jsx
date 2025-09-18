@@ -2,7 +2,8 @@
 import React, { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../../state/auth.jsx"
-import { isEmailLink } from "../../lib/firebase.js"
+import { auth } from "../../lib/firebase"   // ✅ import auth
+import { isSignInWithEmailLink } from "firebase/auth"  // ✅ correct API
 import { Button, Card } from "../../components/ui"
 
 export default function CompleteEmail() {
@@ -16,7 +17,7 @@ export default function CompleteEmail() {
   useEffect(() => {
     async function run() {
       try {
-        if (!isEmailLink(window.location.href)) {
+        if (!isSignInWithEmailLink(auth, window.location.href)) {
           setErr("Invalid or expired link.")
           return
         }
@@ -24,7 +25,7 @@ export default function CompleteEmail() {
         try { stored = window.localStorage.getItem("emailForSignIn") } catch {}
         if (stored) {
           await completeEmailLinkSignIn(stored)
-          nav("/vote", { replace: true })   // ✅ changed to /vote
+          nav("/vote", { replace: true })
           return
         }
         setNeedsEmail(true)
@@ -35,14 +36,15 @@ export default function CompleteEmail() {
       }
     }
     run()
-  }, [])
+  }, [nav, completeEmailLinkSignIn])
 
   async function onSubmit(e) {
     e.preventDefault()
-    setErr(""); setBusy(true)
+    setErr("")
+    setBusy(true)
     try {
       await completeEmailLinkSignIn(email)
-      nav("/vote", { replace: true })   // ✅ changed to /vote
+      nav("/vote", { replace: true })
     } catch (e) {
       setErr(e?.message || String(e))
     } finally {

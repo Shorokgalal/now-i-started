@@ -6,9 +6,7 @@ import {
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
   signOut as fbSignOut,
-  updateProfile,
-  sendSignInLinkToEmail,
-  signInWithEmailLink,
+  updateProfile
 } from "firebase/auth";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
@@ -112,54 +110,6 @@ export function AuthProvider({ children }) {
     await fbSignOut(auth);
   }
 
-  // --- Email link (magic link) ---
-  function actionCodeSettings() {
-    return {
-      url: `${window.location.origin}/complete-email`,
-      handleCodeInApp: true,
-    };
-  }
-
-  async function startEmailLinkSignIn(email, acs = actionCodeSettings()) {
-    if (!email) throw new Error("Please enter your email.");
-    await sendSignInLinkToEmail(auth, email, acs);
-    try {
-      window.localStorage.setItem("emailForSignIn", email);
-    } catch {}
-  }
-
-  async function completeEmailLinkSignIn(emailFromInput) {
-    const stored = (() => {
-      try {
-        return window.localStorage.getItem("emailForSignIn");
-      } catch {
-        return null;
-      }
-    })();
-    const email = emailFromInput || stored;
-    if (!email) throw new Error("Missing email for email-link sign-in.");
-    const { user } = await signInWithEmailLink(auth, email, window.location.href);
-    try {
-      window.localStorage.removeItem("emailForSignIn");
-    } catch {}
-
-    const ref = doc(db, "users", user.uid);
-    await setDoc(
-      ref,
-      {
-        uid: user.uid,
-        email: user.email || email,
-        displayName: user.displayName || (user.email?.split("@")[0] || "User"),
-        emailVerified: !!user.emailVerified,
-        photoURL: user.photoURL || null,
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
-
-    return user;
-  }
-
   const value = useMemo(
     () => ({
       user,
@@ -167,10 +117,7 @@ export function AuthProvider({ children }) {
       signUp,
       signIn,
       sendReset,
-      signOut,
-      startEmailLinkSignIn,
-      completeEmailLinkSignIn,
-      sendVerificationLink: startEmailLinkSignIn,
+      signOut
     }),
     [user, initializing]
   );

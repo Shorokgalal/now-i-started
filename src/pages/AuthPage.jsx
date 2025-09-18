@@ -5,7 +5,7 @@ import { useNavigate, useLocation } from "react-router-dom"
 import { Button } from "../components/ui"
 
 export default function AuthPage() {
-  const { signIn, signUp, sendReset, startEmailLinkSignIn } = useAuth()
+  const { signIn, signUp, sendReset } = useAuth()
   const nav = useNavigate()
   const location = useLocation()
   const from = location.state?.from?.pathname || "/vote"
@@ -134,9 +134,6 @@ export default function AuthPage() {
         <div className="mt-3 flex flex-col gap-2 text-sm text-center">
           <Button variant="ghost" onClick={onForgot}>
             Forgot password?
-          </Button>
-          <Button variant="ghost" onClick={onSendLink}>
-            Send me a magic sign-in link
           </Button>
         </div>
       )}
