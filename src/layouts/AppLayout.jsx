@@ -23,7 +23,7 @@ export default function AppLayout({ children }) {
         <div className={`max-w-4xl w-full mx-auto px-2 sm:px-4 py-2 flex items-center justify-between ${lang === "ar" ? "flex-row-reverse" : ""}`}>
           {/* Logo */}
           <Link to="/vote" className="font-semibold text-lg">
-            🌸
+            🩷
           </Link>
           {/* Navigation icons */}
           <nav className={`flex items-center gap-4 ${lang === "ar" ? "flex-row-reverse" : ""}`}>

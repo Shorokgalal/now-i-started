@@ -23,6 +23,7 @@ messaging.onBackgroundMessage((payload) => {
 
   return self.registration.showNotification(title, {
     body,
-    icon: "/logo192.png", // ✅ safer default icon
+    icon: "/icon-192.png",   // ✅ small icon for notification
+    badge: "/icon-512.png", // ✅ safer default icon
   });
 });
